@@ -1,0 +1,36 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+ul {
+  display: flex;
+  flex-direction: row;
+  padding: 0px;
+  background-color: rgb(51, 51, 51);
+}
+
+li {
+  list-style-type: none;
+
+  a {
+    color: white;
+    padding: 20px 20px;
+    display: block;
+  }
+}
+
+.notes {
+  display: flex;
+  justify-content: space-between;
+}
