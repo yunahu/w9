@@ -1,6 +1,45 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import { Routes, Route, Outlet, Link, useParams } from "react-router-dom";
+import { useQuery, useMutation, useLazyQuery, gql } from "@apollo/client";
+
+const GetNotes = gql`
+  query {
+    notes {
+      id
+      text
+    }
+  }
+`;
+
+const GetPhoto = gql`
+  query Photo($search: String) {
+    photo(search: $search) {
+      url
+      author
+      link
+      alt
+    }
+  }
+`;
+
+const AddNote = gql`
+  mutation AddNote($noteText: String) {
+    addNote(noteText: $noteText)
+  }
+`;
+
+const EditNote = gql`
+  mutation EditNote($id: String, $text: String) {
+    editNote(id: $id, text: $text)
+  }
+`;
+
+const DeleteNote = gql`
+  mutation DeleteNote($id: String) {
+    deleteNote(id: $id)
+  }
+`;
 
 export default function App() {
   return (
@@ -37,44 +76,29 @@ function Layout() {
 }
 
 function Home() {
-  const [notes, setNotes] = useState([]);
-
-  useEffect(() => {
-    const run = async () => {
-      const res = await fetch("http://localhost:3000/notes");
-      setNotes(await res.json());
-    };
-    run();
-  }, []);
+  const { loading, error, data, refetch } = useQuery(GetNotes);
+  const [deleteNote] = useMutation(DeleteNote);
+  const [addNote] = useMutation(AddNote);
 
   const handleDelete = async (id) => {
-    const res = await fetch(`http://localhost:3000/notes/delete/${id}`, {
-      method: "DELETE",
-    });
-    if (res.ok) {
-      setNotes(notes.filter((x) => x.id !== id));
-    }
+    const res = await deleteNote({ variables: { id } });
+    if (res.data.deleteNote) refetch();
   };
 
   const handleAdd = async () => {
     const input = document.querySelector("#noteInput");
-
-    const res = await fetch(`http://localhost:3000/notes/`, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-      method: "POST",
-      body: JSON.stringify({ noteText: input.value }),
-    });
-
-    setNotes(await res.json());
+    const res = await addNote({ variables: { noteText: input.value } });
+    if (res.data.addNote) refetch();
   };
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error :(</p>;
 
   return (
     <div>
       <h1>YANT</h1>
-      {notes &&
-        notes.map((x) => {
+      {data &&
+        data.notes.map((x) => {
           return (
             <div key={x.id}>
               <div className="notes">
@@ -104,47 +128,38 @@ function About() {
 
 const EditPage = () => {
   const { id } = useParams();
-  const [noteText, setNoteText] = useState("");
   const [photo, setPhoto] = useState(null);
-
-  useEffect(() => {
-    const run = async () => {
-      const res = await fetch("http://localhost:3000/notes");
-      const notes = await res.json();
-      const note = notes.filter((x) => x.id === id)[0];
-      setNoteText(note.text);
-    };
-    run();
-  }, []);
-
-  const input = document.querySelector("#inputEdit");
+  const { loading, error, data, refetch } = useQuery(GetNotes);
+  const [editNote] = useMutation(EditNote);
+  const noteText = useMemo(
+    () => data?.notes?.find((x) => x.id === id)?.text,
+    [data, id]
+  );
+  const [getPhoto] = useLazyQuery(GetPhoto);
 
   const handleEdit = async () => {
+    const input = document.querySelector("#inputEdit");
     const text = input.value;
-    const res = await fetch(`http://localhost:3000/notes/edit/${id}`, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-      method: "PATCH",
-      body: JSON.stringify({ text }),
-    });
-    if (res.ok) {
-      setNoteText(text);
-    }
+    const res = await editNote({ variables: { id, text } });
+    if (res.data.editNote) refetch();
   };
 
   const generateImage = async () => {
+    const input = document.querySelector("#inputEdit");
     const text = input.value;
     if (noteText !== text)
       alert(
         "To generate an image from your input, click the Edit button first"
       );
+
     if (noteText) {
-      let result = await fetch(`http://localhost:3000/notes/photo/${noteText}`);
-      result = await result.json();
-      setPhoto(result);
+      let result = await getPhoto({ variables: { search: noteText } });
+      setPhoto(result.data.photo);
     }
   };
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error :(</p>;
 
   return (
     <div>

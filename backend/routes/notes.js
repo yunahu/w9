@@ -6,14 +6,12 @@ const router = express.Router();
 
 router.get("/", function (req, res, next) {
   res.send(notes());
-  res.redirect("/");
 });
 
 router.post("/", function (req, res, next) {
   const noteText = req.body.noteText;
   if (noteText) addNote(noteText);
   res.send(notes());
-  res.redirect("/");
 });
 
 router.delete("/delete/:id", function (req, res, next) {
